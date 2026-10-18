@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f7f4ee">
+<title>나만의 소설 번역 서재</title>
+<style>
+:root{--bg:#f7f4ee;--paper:#fffefa;--ink:#282821;--muted:#77766e;--line:#e5e0d5;--green:#315f4b;--green2:#e7f0e9}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.65}
+header{padding:24px 18px 18px;max-width:900px;margin:auto}h1{font-size:1.55rem;line-height:1.25;margin:0 0 8px}h2{font-size:1.08rem;margin:0 0 12px}.sub{color:var(--muted);font-size:.92rem}
+main{max-width:900px;margin:auto;padding:0 14px 50px;display:grid;gap:14px}.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:16px}
+label{display:block;font-weight:650;font-size:.92rem;margin:12px 0 5px}input,textarea{font:inherit;width:100%;border:1px solid #d7d1c5;border-radius:10px;background:white;padding:11px;color:var(--ink)}textarea{min-height:130px;resize:vertical}button{font:inherit;border:0;border-radius:10px;background:var(--green);color:white;padding:11px 14px;font-weight:650;cursor:pointer}button.secondary{background:var(--green2);color:var(--green);border:1px solid #c9ddce}button.ghost{background:transparent;color:var(--green);border:1px solid var(--line)}button:disabled{opacity:.4;cursor:not-allowed}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.actions button{flex:1}.note{background:#f0eee7;border-radius:10px;padding:10px 12px;color:#57564e;font-size:.88rem}.chapter-list{display:grid;gap:8px}.chapter-row{display:flex;gap:8px;align-items:center;border:1px solid var(--line);padding:9px 10px;border-radius:10px}.chapter-row button{padding:6px 10px}.chapter-row .name{flex:1;min-width:0;overflow-wrap:anywhere}.reader{min-height:200px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:1.05rem;line-height:1.95}.status{font-size:.85rem;color:var(--muted);margin-top:8px}.hidden{display:none!important}.pill{font-size:.78rem;background:var(--green2);color:var(--green);padding:3px 8px;border-radius:99px}
+@media(min-width:760px){main{grid-template-columns:1fr 1fr}.wide{grid-column:1/-1}.reader{font-size:1.12rem}}
+</style>
+</head>
+<body>
+<header><h1>📚 나만의 소설 번역 서재</h1><p class="sub">개인용 시작 버전 · 저장한 내용은 현재 브라우저에 보관됩니다.</p></header>
+<main>
+<section class="card wide"><h2>작품 정보</h2>
+<label for="title">작품 제목</label><input id="title" placeholder="예: My Favorite Story">
+<label for="source">원작 링크 (기록용)</label><input id="source" type="url" placeholder="https://archiveofourown.org/works/…">
+<p class="note">안내: 이 첫 버전은 AO3 링크만으로 원문을 자동 수집하거나 AI 번역하지는 않습니다. 우선 직접 가져온 원문과 번역문을 회차별로 저장하고, 이전 편·다음 편으로 이어 읽는 기능을 제공합니다.</p></section>
+<section class="card"><h2>회차 추가 / 편집</h2>
+<label for="chapterTitle">회차 제목</label><input id="chapterTitle" placeholder="예: Chapter 1">
+<label for="original">원문 (선택)</label><textarea id="original" placeholder="가져온 원문을 여기에 붙여넣으세요."></textarea>
+<label for="translated">번역문</label><textarea id="translated" placeholder="번역문을 여기에 붙여넣으세요."></textarea>
+<div class="actions"><button id="saveChapter">회차 저장</button><button class="secondary" id="newChapter">새 회차</button></div><p class="status" id="editStatus">새 회차를 작성 중입니다.</p></section>
+<section class="card"><h2>내 서재 <span class="pill" id="count">0화</span></h2>
+<div class="chapter-list" id="chapterList"><p class="sub">아직 저장한 회차가 없습니다.</p></div>
+<div class="actions"><button class="secondary" id="exportBtn">백업 내보내기</button><button class="ghost" id="importBtn">백업 가져오기</button><input id="importFile" class="hidden" type="file" accept=".json,application/json"></div>
+<p class="status">브라우저 데이터가 지워질 수 있으니 가끔 백업 파일을 내려받아 두세요.</p></section>
+<section class="card wide"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="margin:0">읽기 화면</h2><span class="pill" id="position">0 / 0</span></div>
+<label for="fontSize">글자 크기</label><input id="fontSize" type="range" min="16" max="28" value="19">
+<div class="reader" id="reader" style="margin-top:16px">회차를 저장한 뒤 목록에서 선택하면 여기에서 읽을 수 있어요.</div>
+<div class="actions"><button class="secondary" id="prevBtn" disabled>← 이전 편</button><button id="nextBtn" disabled>다음 편 →</button></div><p class="status" id="readStatus">읽던 회차와 위치는 이 브라우저에 자동 저장됩니다.</p></section>
+</main>
+<script>
+const $=id=>document.getElementById(id), KEY='soloNovelReader.v1';
+let data={title:'',source:'',chapters:[],currentId:null}, editingId=null;
+function persist(){data.title=$('title').value.trim();data.source=$('source').value.trim();try{localStorage.setItem(KEY,JSON.stringify(data));$('readStatus').textContent='저장됨 · 이 브라우저에 보관 중';}catch(e){$('readStatus').textContent='저장 공간이 부족합니다. 백업 후 일부 내용을 줄여 주세요.';}}
+function renderList(){const list=$('chapterList');list.innerHTML='';$('count').textContent=data.chapters.length+'화';if(!data.chapters.length){list.innerHTML='<p class="sub">아직 저장한 회차가 없습니다.</p>';return;}data.chapters.forEach((c,i)=>{const row=document.createElement('div');row.className='chapter-row';const name=document.createElement('div');name.className='name';name.textContent=(i+1)+'. '+c.title;const open=document.createElement('button');open.className='secondary';open.textContent='읽기';open.onclick=()=>showChapter(c.id);const edit=document.createElement('button');edit.className='ghost';edit.textContent='편집';edit.onclick=()=>editChapter(c.id);const del=document.createElement('button');del.className='ghost';del.textContent='삭제';del.onclick=()=>deleteChapter(c.id);row.append(name,open,edit,del);list.append(row);});}
+function showChapter(id){data.currentId=id;const c=data.chapters.find(x=>x.id===id),idx=data.chapters.findIndex(x=>x.id===id);if(!c)return;$('reader').textContent=c.translated||c.original||'번역문이 없습니다.';$('position').textContent=(idx+1)+' / '+data.chapters.length;$('prevBtn').disabled=idx<=0;$('nextBtn').disabled=idx===data.chapters.length-1;persist();}
+function clearForm(){editingId=null;$('chapterTitle').value='';$('original').value='';$('translated').value='';$('editStatus').textContent='새 회차를 작성 중입니다.';$('saveChapter').textContent='회차 저장';}
+function editChapter(id){const c=data.chapters.find(x=>x.id===id);if(!c)return;editingId=id;$('chapterTitle').value=c.title;$('original').value=c.original||'';$('translated').value=c.translated||'';$('editStatus').textContent='회차 편집 중: '+c.title;$('saveChapter').textContent='수정 내용 저장';window.scrollTo({top:0,behavior:'smooth'});}
+function deleteChapter(id){const c=data.chapters.find(x=>x.id===id);if(!c||!confirm('「'+c.title+'」 회차를 삭제할까요?'))return;data.chapters=data.chapters.filter(x=>x.id!==id);if(data.currentId===id)data.currentId=data.chapters[0]?.id||null;if(editingId===id)clearForm();persist();renderList();if(data.currentId)showChapter(data.currentId);else{$('reader').textContent='회차를 저장한 뒤 목록에서 선택하면 여기에서 읽을 수 있어요.';$('position').textContent='0 / 0';$('prevBtn').disabled=true;$('nextBtn').disabled=true;}}
+$('saveChapter').onclick=()=>{const title=$('chapterTitle').value.trim();if(!title){alert('회차 제목을 입력해 주세요.');return;}const item={id:editingId||('c'+Date.now()+Math.random().toString(16).slice(2)),title,original:$('original').value,translated:$('translated').value};if(editingId){const i=data.chapters.findIndex(c=>c.id===editingId);if(i>=0)data.chapters[i]=item;else data.chapters.push(item);}else data.chapters.push(item);data.currentId=item.id;persist();renderList();showChapter(item.id);clearForm();};
+$('newChapter').onclick=clearForm;
+$('prevBtn').onclick=()=>{const i=data.chapters.findIndex(c=>c.id===data.currentId);if(i>0)showChapter(data.chapters[i-1].id);};
+$('nextBtn').onclick=()=>{const i=data.chapters.findIndex(c=>c.id===data.currentId);if(i>=0&&i<data.chapters.length-1)showChapter(data.chapters[i+1].id);};
+$('title').addEventListener('change',persist);$('source').addEventListener('change',persist);$('fontSize').oninput=e=>$('reader').style.fontSize=e.target.value+'px';
+$('exportBtn').onclick=()=>{persist();const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='my-novel-library-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
+$('importBtn').onclick=()=>$('importFile').click();
+$('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const x=JSON.parse(await f.text());if(!Array.isArray(x.chapters))throw new Error();if(!confirm('현재 서재를 백업 파일 내용으로 바꿀까요?'))return;data={title:'',source:'',chapters:[],currentId:null,...x};$('title').value=data.title||'';$('source').value=data.source||'';persist();renderList();if(data.currentId&&data.chapters.some(c=>c.id===data.currentId))showChapter(data.currentId);else if(data.chapters[0])showChapter(data.chapters[0].id);alert('백업을 가져왔어요.');}catch(err){alert('백업 파일을 읽을 수 없어요. 올바른 JSON 백업인지 확인해 주세요.');}e.target.value='';};
+function load(){try{const x=JSON.parse(localStorage.getItem(KEY)||'null');if(x&&Array.isArray(x.chapters))data={...data,...x};}catch(e){}$('title').value=data.title||'';$('source').value=data.source||'';renderList();if(data.currentId&&data.chapters.some(c=>c.id===data.currentId))showChapter(data.currentId);else if(data.chapters[0])showChapter(data.chapters[0].id);}
+load();
+</script>
+</body></html>
